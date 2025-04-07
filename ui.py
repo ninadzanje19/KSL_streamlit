@@ -1,8 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
-# import fitz # No longer needed for direct PDF processing by Gemini
 import json
-# import io # io is implicitly used by getvalue() but explicit import isn't strictly needed here
+
 
 # --- Configuration ---
 # IMPORTANT: Make sure you have enabled the Generative Language API
@@ -10,10 +9,10 @@ import json
 # Also, `gemini-pro-vision` might have different availability/quotas.
 try:
 
-    genai.configure(api_key="AIzaSyC5ZtIPbveTdZw4sLWJ-mTR7tb4ZNj4ZQk")
+    genai.configure(api_key="AIzaSyD5jMB6FmRXKmdk0nvSe7fxYqD1w-x3meo")
 
     # --- Use gemini-pro-vision for multimodal input ---
-    model = genai.GenerativeModel('gemini-2.0-flash')
+    model = genai.GenerativeModel("gemini-2.5-pro-preview-03-25")
 
 except KeyError:
     st.error("API Key not found. Please add google_generativeai.api_key to your Streamlit secrets (secrets.toml).")
@@ -102,6 +101,7 @@ st.markdown("Upload a PDF file, provide a prompt, and Financial Extractor will a
 # File Uploader
 uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
 
+output = {}
 if uploaded_file is not None:
     # No need to extract text first
 
@@ -111,79 +111,58 @@ if uploaded_file is not None:
     gemini_prompt = """
     You are an expert data extraction tool specialized in analyzing PDF documents.
     Carefully examine the content and structure of the following PDF file.
-    Identify the Consolidated financial statements in the pdf and retrieve the data.
-    Retrieve the terms Current Year Total Revenue
-Previous Year Total Revenue
-Revenue % Years 5 Ago
-Cost of Goods Sold
-Total Expense
-EBITDA
-Depriciation And Amortization
-EBIT (Operating Profit)
-Interest Expense (Finance Cost)
-Net Profit
-Current Year EPS
-Previous Year EPS
+    Identify the Consolidated statement of profit and loss and balance sheet in the pdf and retrieve the data.
+    Retrieve the terms:
 
-Total Assets Current Year
-Total Assets Previous Year
-Average Total Assets
-Previous Year Inventory 
-Current Year Inventory
-Average Inventory
-Previous Year Receivables
-Current Year Receivables
-Previous Year Trade Payables
-Current Year Trade Payables
-Average Receivables
-Cash & Cash Equivalent
-
-Total Liabilities Current Year
-Total Liabilities Previous Year
-Total Shareholder's Equity
-Total Debt
-Previous Year Trade Payables
-
-Current Year Current Liabilities
-Current Year Non-Current Liabilities
-Enterprise Value
-
-Market Price per Share (year end)
-Current Market Price
-Market capitalisation (current)
-Book Value per share
-Number of total outstanding Shares (Year end)
-Number of total outstanding Shares (Current)
-Minority shares
-
-Days Receivable
-Days Payable
-Days Inventory
-
-If a particular term is not found set its value to NaN
-    Structure your findings strictly as a JSON object. Use clear and descriptive keys.
-    For example, if it's an invoice:
-    {
-      "document_type": "Invoice",
-      "invoice_id": "INV-1234",
-      "issue_date": "2024-01-15",
-      "due_date": "2024-02-14",
-      "issuer_name": "Supplier Ltd.",
-      "issuer_address": "123 Supply St, Goods City, GC 54321",
-      "customer_name": "Acme Corp",
-      "customer_address": "456 Buyer Ave, Client Town, CT 12345",
-      "line_items": [
-        {"description": "Widget A", "quantity": 2, "unit_price": 50.00, "total": 100.00},
-        {"description": "Service B", "quantity": 1, "unit_price": 50.75, "total": 50.75}
-      ],
-      "subtotal": 150.75,
-      "tax_amount": 10.55,
-      "total_amount": 161.30
-    }
-    Only return the JSON object, nothing else before or after it (no introductory text, no explanations, no markdown formatting like ```json).
-    If the document doesn't contain easily extractable structured data, describe the document type and key topics found in the JSON object (e.g., {"document_type": "Research Paper", "title": "...", "authors": ["..."], "abstract_summary": "..."}).
-    If no relevant information can be reliably extracted, return an empty JSON object {}.
+    Current Year Total Revenue
+    Previous Year Total Revenue
+    
+    Cost of Goods Sold          	Calculate using the formula  (Cost of materials + Purchases + Change in Inventories)
+    Total Expense
+    EBITDA                          Calculate using the formula  (PBT + Finance Cost + Depreciation)
+    Depriciation And Amortization
+    EBIT (Operating Profit)         Calculate using the formula  (PBT + Finance Cost)
+    Interest Expense (Finance Cost)
+    Net Profit
+    Current Year EPS
+    Previous Year EPS
+    
+    Total Assets Current Year
+    Total Assets Previous Year
+    Average Total Assets
+    Previous Year Inventory 
+    Current Year Inventory
+    Average Inventory
+    Previous Year Receivables
+    Current Year Receivables
+    Previous Year Trade Payables
+    Current Year Trade Payables
+    Average Receivables
+    Cash & Cash Equivalent
+    
+    Total Liabilities Current Year
+    Total Liabilities Previous Year
+    Total Shareholder's Equity
+    Total Debt                          Calculate using the formula  (Borrowings + Lease Liabilities)
+    Previous Year Trade Payables
+    
+    Current Year Current Liabilities
+    Current Year Non-Current Liabilities
+    
+    
+    Book Value per share                Calculate using the formula  (Total Equity / Shares Outstanding)
+    Number of total outstanding Shares (Year end)
+    
+    Minority shares
+    
+    Days Receivable     calculate using the formula  ((Previous year Receivables + Current year Receivables/2) / Current Revenue)*365 
+    Days Payable        calculate using the formula  ((Previous year Payable + Current year Payable/2) / Current COGS)*365 
+    Days Inventory      calculate using the formula ((Previous year Inventory + Current year Inventory/2) / Current COGS)*365   
+    
+    Return the value in dataframe format as the response. The first column should be the names of the values, second column should be the actual values and the third column should contain how the values are calculated wether they are directly 
+    Dont give me the code to do this only return the dataframe.
     """
+
     # -----------------------------------------------
 
     st.info("🚀 Sending PDF to Financial Extractor for processing...")
@@ -196,17 +175,16 @@ If a particular term is not found set its value to NaN
         st.success("✨ Financial Extractor processing complete!")
 
         # 4. Clean and Parse JSON response
-        json_output = clean_and_parse_json(gemini_response_text)
+        output = gemini_response_text
 
-        if json_output is not None: # Check if parsing was successful (even if result is {})
-            st.subheader("Extracted Information (JSON):")
-            if not json_output: # Handle empty JSON object explicitly
+        if output is not None: # Check if parsing was successful (even if result is {})
+            st.subheader("Extracted Information:")
+            if not output: # Handle empty JSON object explicitly
                  st.info("Financial Extractor returned an empty JSON object, possibly indicating no specific structured data was found or extracted.")
             else:
-                st.json(json_output) # Display the parsed JSON
-        # else: Error message is handled within clean_and_parse_json
+                st.write(output) # Display the dataframe
 
-    # else: Error messages are handled within call_gemini_api_with_pdf
 
 else:
     st.info("Please upload a PDF file to start the extraction process.")
+
