@@ -117,11 +117,11 @@ if uploaded_file is not None:
     Current Year Total Revenue
     Previous Year Total Revenue
     
-    Cost of Goods Sold          	Calculate using the formula  (Cost of materials + Purchases + Change in Inventories)
+
     Total Expense
-    EBITDA                          Calculate using the formula  (PBT + Finance Cost + Depreciation)
+
     Depriciation And Amortization
-    EBIT (Operating Profit)         Calculate using the formula  (PBT + Finance Cost)
+
     Interest Expense (Finance Cost)
     Net Profit
     Current Year EPS
@@ -143,22 +143,17 @@ if uploaded_file is not None:
     Total Liabilities Current Year
     Total Liabilities Previous Year
     Total Shareholder's Equity
-    Total Debt                          Calculate using the formula  (Borrowings + Lease Liabilities)
     Previous Year Trade Payables
     
     Current Year Current Liabilities
     Current Year Non-Current Liabilities
     
     
-    Book Value per share                Calculate using the formula  (Total Equity / Shares Outstanding)
+
     Number of total outstanding Shares (Year end)
     
     Minority shares
-    
-    Days Receivable     calculate using the formula  ((Previous year Receivables + Current year Receivables/2) / Current Revenue)*365 
-    Days Payable        calculate using the formula  ((Previous year Payable + Current year Payable/2) / Current COGS)*365 
-    Days Inventory      calculate using the formula ((Previous year Inventory + Current year Inventory/2) / Current COGS)*365   
-    
+        
     Return the value in dataframe format as the response. The first column should be the names of the values, second column should be the actual values and the third column should contain how the values are calculated wether they are directly 
     Dont give me the code to do this only return the dataframe.
     """
